@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>予想問題チャレンジ（ステップ式）</title>
+<style>
+  :root{
+    --main:#3b6ea5; --sub:#f2a341; --bg:#f6f7fb; --card:#ffffff;
+    --ok:#3fa66a; --ng:#e2593c; --weak:#9b59b6;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0;
+    font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
+    background:var(--bg);
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    min-height:100vh;
+  }
+  body{
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+  }
+  #app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;}
+  header{
+    background:var(--main); color:#fff;
+    padding:16px 16px 14px 16px;
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+    text-align:center; position:relative;
+  }
+  header h1{margin:0; font-size:16px; font-weight:700;}
+  header .back{
+    position:absolute; left:12px; top:calc(14px + env(safe-area-inset-top,0px));
+    background:none; border:none; color:#fff; font-size:16px;
+    -webkit-appearance:none; padding:4px 8px; cursor:pointer;
+  }
+  main{flex:1; padding:16px; padding-bottom:32px;}
+
+  .notice{
+    background:#fff8e6; border:1px solid #f0d98c; border-radius:12px;
+    padding:12px 14px; font-size:12.5px; color:#7a6320; line-height:1.6; margin-bottom:16px;
+  }
+
+  .quick-card{
+    -webkit-appearance:none; border:none; border-radius:16px; padding:18px 16px; width:100%;
+    text-align:left; color:#fff; display:flex; justify-content:space-between; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12); cursor:pointer; margin-bottom:12px;
+  }
+  .quick-card.weak{background:linear-gradient(135deg,#7d3c98,#9b59b6);}
+  .quick-card.random{background:linear-gradient(135deg,#c9852e,#f2a341);}
+  .quick-card small{display:block; font-size:12px; font-weight:400; opacity:0.92; margin-top:4px;}
+  .quick-card .arrow{font-size:22px; opacity:0.85;}
+
+  .section-label{font-size:13px; font-weight:700; color:#889; margin:18px 0 8px 2px;}
+
+  .subject-grid{display:flex; flex-direction:column; gap:14px;}
+  .subject-btn{
+    -webkit-appearance:none; border:none; border-radius:16px; padding:22px 16px;
+    font-size:19px; font-weight:700; color:#fff; text-align:left;
+    display:flex; justify-content:space-between; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12); cursor:pointer;
+  }
+  .subject-btn small{display:block; font-size:12px; font-weight:400; opacity:0.9; margin-top:4px;}
+  .subject-btn.math{background:linear-gradient(135deg,#3b6ea5,#5b8fc9);}
+  .subject-btn.kokugo{background:linear-gradient(135deg,#a5473b,#c96f5b);}
+  .subject-btn.eigo{background:linear-gradient(135deg,#3b9e6e,#5bc98f);}
+  .subject-btn .arrow{font-size:22px; opacity:0.8;}
+
+  .cat-list{display:flex; flex-direction:column; gap:12px;}
+  .cat-btn{
+    -webkit-appearance:none; border:2px solid #dde2ec; background:#fff; border-radius:14px;
+    padding:16px; text-align:left; cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+  }
+  .cat-btn .catname{font-size:16px; font-weight:700; color:#222;}
+  .cat-btn .catmeta{font-size:12px; color:#888; margin-top:3px;}
+  .cat-btn .arrow{font-size:20px; color:#aab;}
+
+  .progress-wrap{display:flex; align-items:center; gap:10px; margin-bottom:16px;}
+  .progress-bar{flex:1; height:8px; background:#e2e6ee; border-radius:6px; overflow:hidden;}
+  .progress-fill{height:100%; background:var(--sub); transition:width .25s ease;}
+  .progress-text{font-size:13px; color:#555; min-width:48px; text-align:right;}
+
+  .qcard{background:var(--card); border-radius:16px; padding:20px 18px; box-shadow:0 2px 10px rgba(0,0,0,0.08); margin-bottom:18px;}
+  .qnum{font-size:12px; color:var(--main); font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;}
+  .qnum .tag{background:#eef1f7; color:#667; padding:2px 8px; border-radius:6px; font-weight:700;}
+  .qnum .step-tag{background:var(--sub); color:#fff; padding:2px 8px; border-radius:6px; font-weight:700;}
+  .problem-context{
+    font-size:14.5px; color:#556; background:#f4f6fb; border-radius:10px; padding:10px 12px;
+    margin-bottom:10px; line-height:1.6; white-space:pre-wrap;
+  }
+  .qtext{font-size:17px; line-height:1.7; font-weight:600; color:#222; white-space:pre-wrap;}
+
+  .choices{display:flex; flex-direction:column; gap:10px;}
+  .choice-btn{
+    -webkit-appearance:none; width:100%; text-align:left; background:#fff;
+    border:2px solid #dde2ec; border-radius:12px; padding:14px 14px;
+    font-size:16px; font-family:inherit; color:#222; display:flex; align-items:center; gap:10px; cursor:pointer;
+  }
+  .choice-btn .num{flex:0 0 26px; height:26px; border-radius:50%; background:#eef1f7; color:#556; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center;}
+  .choice-btn.correct{border-color:var(--ok); background:#eefaf1;}
+  .choice-btn.correct .num{background:var(--ok); color:#fff;}
+  .choice-btn.wrong{border-color:var(--ng); background:#fdeeea;}
+  .choice-btn.wrong .num{background:var(--ng); color:#fff;}
+  .choice-btn[disabled]{cursor:default;}
+
+  .explain{margin-top:14px; padding:12px 14px; background:#f1f5fb; border-radius:10px; font-size:14px; line-height:1.6; color:#33455c; display:none;}
+  .explain.show{display:block;}
+  .explain .type-tag{display:inline-block; background:var(--main); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin-bottom:6px;}
+  .explain .wrong-flag{display:inline-block; background:var(--weak); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin-bottom:6px; margin-left:6px;}
+
+  .next-btn{-webkit-appearance:none; width:100%; border:none; border-radius:12px; padding:15px; background:var(--main); color:#fff; font-size:16px; font-weight:700; margin-top:16px; cursor:pointer; display:none;}
+  .next-btn.show{display:block;}
+
+  .result-card{background:var(--card); border-radius:18px; padding:32px 20px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+  .result-score{font-size:44px; font-weight:800; color:var(--main); margin:10px 0;}
+  .result-msg{font-size:15px; color:#555; margin-bottom:20px;}
+  .result-btn{-webkit-appearance:none; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:700; color:#fff; background:var(--main); width:100%; margin-top:10px; cursor:pointer;}
+  .result-btn.secondary{background:#8b93a5;}
+  .result-btn.weak{background:var(--weak);}
+  .best-note{font-size:12px; color:#888; margin-top:14px;}
+
+  .weak-breakdown{display:flex; flex-direction:column; gap:10px; margin-bottom:20px;}
+  .weak-row{display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:10px; padding:12px 14px; border:1px solid #e5e8f0;}
+  .weak-row .name{font-size:14px; font-weight:600; color:#333;}
+  .weak-row .cnt{font-size:14px; font-weight:700; color:var(--weak);}
+  .empty-msg{text-align:center; color:#888; font-size:14px; padding:40px 10px; line-height:1.8;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="back" id="backBtn" style="display:none;" onclick="goBack()">←戻る</button>
+    <h1 id="headerTitle">予想問題チャレンジ</h1>
+  </header>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ===================================================================
+   データ：すべてオリジナルの予想問題です。
+   実際の試験問題・数値・文章の転載ではなく、
+   同じ単元・同じ解法パターンに基づいて新規に作成したものです。
+   数学は steps 配列を持つ問題があり、その場合は「計算の順番」を
+   1ステップずつ4択で確認しながら答えにたどりつく形式になります。
+=================================================================== */
+const QUESTIONS = {
+  math: { name:"数学", color:"math", categories:[
+    { key:"calc", name:"計算・基本", meta:"負の数・累乗・分数・図形の基本（ステップ式）", items:[
+      {q:"-7+(-3)×2 を計算しなさい。",type:"四則の混合計算",steps:[
+        {prompt:"最初に計算する部分はどこ？",choices:["(-3)×2","-7+(-3)","2×(-7)","-7-(-3)"],a:0,ex:"かけ算・わり算はたし算・ひき算より先に計算する。"},
+        {prompt:"(-3)×2 の結果は？",choices:["-6","6","-5","5"],a:0,ex:"負の数×正の数は負の数になる。"},
+        {prompt:"-7+(-6) の結果（答え）は？",choices:["-13","-1","-20","-4"],a:0,ex:"同符号どうしのたし算は絶対値を足して同じ符号をつける。-7+(-6)=-13。"}
+      ]},
+      {q:"(-2)³ を計算しなさい。",type:"累乗の計算",steps:[
+        {prompt:"(-2)³ はどんな式に書き直せる？",choices:["(-2)×(-2)×(-2)","(-2)×3","(-2)+(-2)+(-2)","2×2×2"],a:0,ex:"累乗は同じ数をその個数だけかけ合わせること。"},
+        {prompt:"(-2)×(-2) の結果は？",choices:["4","-4","6","-6"],a:0,ex:"負×負は正になる。"},
+        {prompt:"4×(-2) の結果（答え）は？",choices:["-8","8","-6","6"],a:0,ex:"正×負は負になる。4×(-2)=-8。"}
+      ]},
+      {q:"2/3 - 1/4×2 を計算しなさい。",type:"分数の混合計算",steps:[
+        {prompt:"最初に計算する部分はどこ？",choices:["1/4×2","2/3-1/4","2×2/3","2÷1/4"],a:0,ex:"かけ算を先に計算する。"},
+        {prompt:"1/4×2 の結果は？",choices:["1/2","1/8","2/4","1/6"],a:0,ex:"1/4×2=2/4=1/2。"},
+        {prompt:"2/3-1/2 の結果（答え）は？（通分して計算）",choices:["1/6","1/12","5/6","1/3"],a:0,ex:"通分すると4/6-3/6=1/6。"}
+      ]},
+      {q:"3(x-2)+5 を計算して簡単にしなさい。",type:"分配法則",steps:[
+        {prompt:"最初にすべきことは？",choices:["3をx-2に分配してかける","5を先に3に加える","xを2に置き換える","(x-2)を5倍する"],a:0,ex:"かっこの前の数はかっこの中すべてにかける（分配法則）。"},
+        {prompt:"3(x-2) を展開すると？",choices:["3x-6","3x-2","x-6","3x+6"],a:0,ex:"3×x-3×2=3x-6。"},
+        {prompt:"3x-6+5 を計算すると（答え）？",choices:["3x-1","3x+1","3x-6","x-1"],a:0,ex:"-6+5=-1なので3x-1。"}
+      ]},
+      {q:"|-8|+|5| を計算しなさい。",type:"絶対値",steps:[
+        {prompt:"|-8| の値は？",choices:["8","-8","3","-3"],a:0,ex:"絶対値は符号を除いた大きさ。|-8|=8。"},
+        {prompt:"|5| の値は？",choices:["5","-5","0","10"],a:0,ex:"|5|=5。"},
+        {prompt:"8+5 の結果（答え）は？",choices:["13","-13","3","-3"],a:0,ex:"8+5=13。"}
+      ]},
+      {q:"半径3cmの半円の面積を求めなさい。円周率は3.14とする。",type:"半円の面積",steps:[
+        {prompt:"最初に求めるべきものは？",choices:["円全体の面積","円の周りの長さ","半径の2倍","直径の長さ"],a:0,ex:"半円の面積は、まず円全体の面積を求めてから半分にする。"},
+        {prompt:"円の面積（3×3×3.14）の結果は？",choices:["28.26","9.42","18.84","14.13"],a:0,ex:"半径×半径×円周率=3×3×3.14=28.26。"},
+        {prompt:"円の面積を2で割った結果（答え）は？",choices:["14.13cm²","28.26cm²","9.42cm²","7.065cm²"],a:0,ex:"28.26÷2=14.13cm²。"}
+      ]},
+      {q:"5-3×(-2) を計算しなさい。",type:"四則の混合計算",steps:[
+        {prompt:"最初に計算する部分はどこ？",choices:["3×(-2)","5-3","5×(-2)","3-5"],a:0,ex:"かけ算を先に計算する。"},
+        {prompt:"3×(-2) の結果は？",choices:["-6","6","-5","5"],a:0,ex:"正×負は負になる。"},
+        {prompt:"5-(-6) の結果（答え）は？",choices:["11","1","-1","16"],a:0,ex:"ひくマイナスはたすと同じ。5+6=11。"}
+      ]},
+      {q:"(-3)²-2² を計算しなさい。",type:"累乗の計算",steps:[
+        {prompt:"(-3)² の結果は？",choices:["9","-9","6","-6"],a:0,ex:"負×負は正。(-3)×(-3)=9。"},
+        {prompt:"2² の結果は？",choices:["4","-4","2","-2"],a:0,ex:"2×2=4。"},
+        {prompt:"9-4 の結果（答え）は？",choices:["5","-5","13","1"],a:0,ex:"9-4=5。"}
+      ]},
+      {q:"3/4 + 1/6×3 を計算しなさい。",type:"分数の混合計算",steps:[
+        {prompt:"最初に計算する部分はどこ？",choices:["1/6×3","3/4+1/6","3×3/4","3÷1/6"],a:0,ex:"かけ算を先に計算する。"},
+        {prompt:"1/6×3 の結果は？",choices:["1/2","1/9","3/2","2/3"],a:0,ex:"1/6×3=3/6=1/2。"},
+        {prompt:"3/4+1/2 の結果（答え）は？",choices:["5/4","3/4","1/4","7/4"],a:0,ex:"通分すると3/4+2/4=5/4。"}
+      ]},
+      {q:"2(x+3)-(x-1) を計算して簡単にしなさい。",type:"分配法則と同類項",steps:[
+        {prompt:"最初にすべきことは？",choices:["2をx+3に分配してかける","xを3に置き換える","1をxから引く","(x-1)を2倍する"],a:0,ex:"かっこの前の数をかっこの中すべてにかける。"},
+        {prompt:"2(x+3) を展開すると？",choices:["2x+6","2x+3","x+6","2x-6"],a:0,ex:"2×x+2×3=2x+6。"},
+        {prompt:"-(x-1) を展開すると？",choices:["-x+1","-x-1","x-1","-x"],a:0,ex:"マイナスをかっこの中すべてに配る。-x+1。"},
+        {prompt:"2x+6-x+1 を整理すると（答え）？",choices:["x+7","x+5","3x+5","x+1"],a:0,ex:"xの項2x-x=x、数の項6+1=7。x+7。"}
+      ]}
+    ]},
+    { key:"basic", name:"基本問題", meta:"不等式・代入・平均・分数式（ステップ式）", items:[
+      {q:"ノート240冊をa人に7冊ずつ配ると余る。この関係を正しく表した不等式を選べ。",type:"不等式で表す文章題",steps:[
+        {prompt:"配った本数を表す式は？",choices:["7a","240-a","7+a","240/a"],a:0,ex:"1人7冊をa人に配るので7a冊。"},
+        {prompt:"「余る」を正しく表す不等号の式は？（答え）",choices:["7a<240","7a>240","7a=240","240a<7"],a:0,ex:"配った数（7a）が全体（240）より少ないので7a<240。"}
+      ]},
+      {q:"x=-3 のとき、x²-2x の値を求めなさい。",type:"式に負の数を代入",steps:[
+        {prompt:"x² に-3を代入した結果は？",choices:["9","-9","6","-6"],a:0,ex:"(-3)²=(-3)×(-3)=9。"},
+        {prompt:"-2x に-3を代入した結果は？",choices:["6","-6","5","-5"],a:0,ex:"-2×(-3)=6。"},
+        {prompt:"9+6 の結果（答え）は？",choices:["15","-15","3","-3"],a:0,ex:"9+6=15。"}
+      ]},
+      {q:"3つの数 a, 5a, 12 の平均を、aを用いたもっとも簡単な式で表しなさい。",type:"平均の式（合計÷個数）",steps:[
+        {prompt:"3つの数の合計を表す式は？",choices:["6a+12","5a+12","6a+17","a+5a"],a:0,ex:"a+5a+12=6a+12。"},
+        {prompt:"(6a+12)を3で割った結果（答え）は？",choices:["2a+4","2a+12","6a+4","2a+2"],a:0,ex:"(6a+12)÷3=2a+4。"}
+      ]},
+      {q:"次の式を計算しなさい。\nx/2 - (x-1)/3",type:"分数を含む式の計算（通分）",steps:[
+        {prompt:"通分するときの分母は？",choices:["6","5","3","2"],a:0,ex:"2と3の最小公倍数は6。"},
+        {prompt:"x/2 を分母6にすると？",choices:["3x/6","2x/6","x/6","6x/6"],a:0,ex:"分母を2倍したので分子も2倍して3x/6。"},
+        {prompt:"(x-1)/3 を分母6にすると？",choices:["2(x-1)/6","3(x-1)/6","(x-1)/6","6(x-1)/6"],a:0,ex:"分母を2倍したので分子も2倍して2(x-1)/6。"},
+        {prompt:"3x/6-2(x-1)/6 を計算すると（答え）？",choices:["(x+2)/6","(x-2)/6","(5x-2)/6","(x+2)/3"],a:0,ex:"3x-2(x-1)=3x-2x+2=x+2。よって(x+2)/6。"}
+      ]},
+      {q:"絶対値が2より大きく、5より小さい整数はいくつあるか。",type:"絶対値の範囲",steps:[
+        {prompt:"絶対値が2より大きく5より小さい正の整数は？",choices:["3,4","2,3,4","1,2,3","4,5"],a:0,ex:"2より大きく5より小さい整数は3,4。"},
+        {prompt:"負の数も含めた整数の個数（答え）は？",choices:["4個","6個","8個","2個"],a:0,ex:"3,4とその負の数-3,-4を合わせて4個。"}
+      ]},
+      {q:"リンゴを1個150円、みかんを1個80円で合わせて10個買い、1000円以内にしたい。リンゴをx個買うときの関係を正しく表した不等式を選べ。",type:"不等式で表す文章題（2種類の代金）",steps:[
+        {prompt:"リンゴx個の代金を表す式は？",choices:["150x","80x","150+x","x/150"],a:0,ex:"1個150円のx個分なので150x円。"},
+        {prompt:"みかん(10-x)個の代金を表す式は？",choices:["80(10-x)","150(10-x)","80-x","(10-x)/80"],a:0,ex:"1個80円の(10-x)個分なので80(10-x)円。"},
+        {prompt:"1000円以内にする式（答え）は？",choices:["150x+80(10-x)≤1000","150x+80(10-x)≥1000","150x-80(10-x)≤1000","80x+150(10-x)≤1000"],a:0,ex:"合計金額が1000円以下になればよい。"}
+      ]},
+      {q:"x=-2 のとき、3x²+x の値を求めなさい。",type:"式に負の数を代入",steps:[
+        {prompt:"x² に-2を代入した結果は？",choices:["4","-4","2","-2"],a:0,ex:"(-2)²=4。"},
+        {prompt:"3×4 の結果は？",choices:["12","-12","6","-6"],a:0,ex:"3×4=12。"},
+        {prompt:"12+(-2) の結果（答え）は？",choices:["10","-10","14","2"],a:0,ex:"12-2=10。"}
+      ]},
+      {q:"4つの数 a, a, 2a, 20 の平均を、aを用いたもっとも簡単な式で表しなさい。",type:"平均の式（合計÷個数）",steps:[
+        {prompt:"4つの数の合計を表す式は？",choices:["4a+20","3a+20","4a+22","2a+20"],a:0,ex:"a+a+2a+20=4a+20。"},
+        {prompt:"(4a+20)を4で割った結果（答え）は？",choices:["a+5","4a+5","a+20","4a+20"],a:0,ex:"(4a+20)÷4=a+5。"}
+      ]},
+      {q:"次を計算しなさい。\n(2x-1)/3 - (x-2)/4",type:"分数を含む式の計算（通分）",steps:[
+        {prompt:"通分するときの分母は？",choices:["12","7","3","4"],a:0,ex:"3と4の最小公倍数は12。"},
+        {prompt:"(2x-1)/3 を分母12にすると？",choices:["4(2x-1)/12","3(2x-1)/12","(2x-1)/12","12(2x-1)/12"],a:0,ex:"分母を4倍したので分子も4倍。"},
+        {prompt:"(x-2)/4 を分母12にすると？",choices:["3(x-2)/12","4(x-2)/12","(x-2)/12","12(x-2)/12"],a:0,ex:"分母を3倍したので分子も3倍。"},
+        {prompt:"4(2x-1)/12-3(x-2)/12 を計算すると（答え）？",choices:["(5x+2)/12","(5x-2)/12","(x+2)/12","(5x+2)/7"],a:0,ex:"4(2x-1)-3(x-2)=8x-4-3x+6=5x+2。よって(5x+2)/12。"}
+      ]}
+    ]},
+    { key:"word", name:"文章題", meta:"割合・速さ・体積・増減表（ステップ式）", items:[
+      {q:"あるお菓子屋では、1回の仕込みで300gの生地ができる。お菓子Aは生地を10g、お菓子Bは生地を15g使う。お菓子Aとお菓子Bを1個ずつセットにして売るとき、生地をちょうど使い切るには、セットを何個作ればよいか。",type:"割り算で求める文章題（全体÷1セットの量）",steps:[
+        {prompt:"1セットで使う生地の量を表す式は？",choices:["10+15","10×15","300/10","300-15"],a:0,ex:"A1個とB1個をあわせて10+15=25g。"},
+        {prompt:"300÷25 の結果（答え）は？",choices:["12個","10個","15個","20個"],a:0,ex:"300÷25=12個。"}
+      ]},
+      {q:"自宅から駅まで1200mの道を分速80mで歩くと何分かかるか。",type:"速さの文章題（時間＝道のり÷速さ）",steps:[
+        {prompt:"時間を求めるにはどの計算をする？",choices:["道のり÷速さ","道のり×速さ","速さ÷道のり","道のり+速さ"],a:0,ex:"時間＝道のり÷速さ。"},
+        {prompt:"1200÷80 の結果（答え）は？",choices:["15分","12分","20分","10分"],a:0,ex:"1200÷80=15分。"}
+      ]},
+      {q:"1辺8cmの立方体から、1辺4cmの立方体を1つ切り取った。残りの立体の体積を求めなさい。",type:"立体の体積（全体−取り除いた部分）",steps:[
+        {prompt:"8cmの立方体の体積は？",choices:["512cm³","256cm³","64cm³","1024cm³"],a:0,ex:"8×8×8=512cm³。"},
+        {prompt:"4cmの立方体の体積は？",choices:["64cm³","32cm³","16cm³","128cm³"],a:0,ex:"4×4×4=64cm³。"},
+        {prompt:"512-64 の結果（答え）は？",choices:["448cm³","384cm³","512cm³","64cm³"],a:0,ex:"512-64=448cm³。"}
+      ]},
+      {q:"ある店の来客数について、月曜を基準として、火曜は+12人、水曜は火曜より-5人、木曜は水曜より+9人増減した。木曜は月曜と比べて何人増減したか。",type:"増減の表の文章題（基準からの合計）",steps:[
+        {prompt:"火曜は月曜と比べて何人増減？",choices:["+12人","-12人","+5人","-5人"],a:0,ex:"火曜は月曜より+12人。"},
+        {prompt:"水曜は月曜と比べて何人増減？（火曜の結果に-5を加える）",choices:["+7人","+17人","-7人","+12人"],a:0,ex:"+12+(-5)=+7。"},
+        {prompt:"木曜は月曜と比べて何人増減？（水曜の結果に+9を加える）（答え）",choices:["+16人","+7人","+26人","-2人"],a:0,ex:"+7+9=+16。"}
+      ]},
+      {q:"あるジュース工場では1回の製造で630mLの原液ができる。ジュースAには原液9mL、ジュースBには原液12mLを使う。AとBを1本ずつセットで作るとき、原液を使い切るには何セット作れるか。",type:"割り算で求める文章題（全体÷1セットの量）",steps:[
+        {prompt:"1セットで使う原液の量を表す式は？",choices:["9+12","9×12","630/9","630-12"],a:0,ex:"A1本とB1本をあわせて9+12=21mL。"},
+        {prompt:"630÷21 の結果（答え）は？",choices:["30セット","25セット","35セット","21セット"],a:0,ex:"630÷21=30セット。"}
+      ]},
+      {q:"家から図書館まで2100mの道を、はじめ分速70mで歩き、途中から分速105mで歩いたら合計24分かかった。分速105mで歩いた道のりは何mか。",type:"速さの文章題（時間の合計で方程式を立てる）",steps:[
+        {prompt:"分速105mで歩いた道のりをxmとすると、分速70mで歩いた道のりを表す式は？",choices:["2100-x","x-2100","2100+x","x/2100"],a:0,ex:"全体の道のりから引けば残りの道のりになる。"},
+        {prompt:"かかった時間の合計を表す方程式として正しいものは？",choices:["(2100-x)/70+x/105=24","(2100-x)/105+x/70=24","70(2100-x)+105x=24","(2100-x)+x=24"],a:0,ex:"それぞれの時間（道のり÷速さ）を足すと合計時間になる。"},
+        {prompt:"この方程式を解いたxの値（答え）は？",choices:["1260m","1200m","900m","1400m"],a:0,ex:"両辺を210倍して整理すると、x=1260。"}
+      ]},
+      {q:"1辺10cmの立方体から、1辺5cmの立方体を2つ切り取った。残りの立体の体積を求めなさい。",type:"立体の体積（全体−取り除いた部分）",steps:[
+        {prompt:"10cmの立方体の体積は？",choices:["1000cm³","500cm³","100cm³","2000cm³"],a:0,ex:"10×10×10=1000cm³。"},
+        {prompt:"5cmの立方体1つの体積は？",choices:["125cm³","100cm³","250cm³","625cm³"],a:0,ex:"5×5×5=125cm³。"},
+        {prompt:"1000-125×2 の結果（答え）は？",choices:["750cm³","875cm³","500cm³","625cm³"],a:0,ex:"125×2=250。1000-250=750cm³。"}
+      ]},
+      {q:"ある店の来客数について、先月を基準に今月は+4人、来月はさらに今月より-6人増減する予定である。来月は先月と比べて何人増減するか。",type:"増減の表の文章題（基準からの合計）",steps:[
+        {prompt:"今月は先月と比べて何人増減？",choices:["+4人","-4人","+6人","-6人"],a:0,ex:"今月は先月より+4人。"},
+        {prompt:"来月は先月と比べて何人増減？（今月の結果に-6を加える）（答え）",choices:["-2人","+10人","+2人","-10人"],a:0,ex:"+4+(-6)=-2。"}
+      ]}
+    ]},
+    { key:"advanced", name:"選択問題タイプ", meta:"操作の繰り返し・方程式・図形の性質（ステップ式）", items:[
+      {q:"正の整数aに対して、「aを2倍した数に3を加える」操作を考える。a=4のとき、この操作を2回続けて行うと得られる数はいくらか。",type:"操作を繰り返す問題（1回ずつ順に計算）",steps:[
+        {prompt:"1回目の操作の結果は？",choices:["11","14","8","7"],a:0,ex:"4×2+3=11。"},
+        {prompt:"2回目の操作の結果（答え）は？（11に対して同じ操作を行う）",choices:["25","22","14","11"],a:0,ex:"11×2+3=25。"}
+      ]},
+      {q:"ノート1冊の値段をx円とする。ノートを8冊買うと500円余り、10冊買うと100円足りない。ノート1冊の値段を求めなさい。",type:"方程式の利用（2つの式を等しいと置く）",steps:[
+        {prompt:"8冊買った場合、持っていた金額を表す式は？",choices:["8x+500","8x-500","500-8x","8x×500"],a:0,ex:"8冊分の代金より500円多く持っていた。"},
+        {prompt:"10冊買った場合、持っていた金額を表す式は？",choices:["10x-100","10x+100","100-10x","10x×100"],a:0,ex:"10冊分の代金より100円少なく持っていた。"},
+        {prompt:"2つの式を=でつないで整理すると？",choices:["2x=600","2x=-600","8x=600","10x=600"],a:0,ex:"8x+500=10x-100 を整理すると2x=600。"},
+        {prompt:"x の値（答え）は？",choices:["300円","250円","400円","200円"],a:0,ex:"2x=600よりx=300。"}
+      ]},
+      {q:"円Oの外部の点Cから引いた2本の接線が、円と点A，点Bで接している。∠ACB=50°のとき、∠AOBの大きさを求めなさい。",type:"円の接線の性質（接線⊥半径）",steps:[
+        {prompt:"∠OAC, ∠OBCの大きさはそれぞれ？",choices:["90°ずつ","50°ずつ","45°ずつ","60°ずつ"],a:0,ex:"接線は接点を通る半径に垂直なので90°。"},
+        {prompt:"四角形OACBの内角の和は？",choices:["360°","180°","270°","90°"],a:0,ex:"四角形の内角の和はつねに360°。"},
+        {prompt:"360-90-90-50 の結果（答え）は？",choices:["130°","140°","100°","50°"],a:0,ex:"360-90-90-50=130°。"}
+      ]},
+      {q:"太郎さんは家から公園まで1800mの道を、はじめは分速60mで歩き、途中から分速90mで歩いたところ、25分かかった。分速90mで歩いた道のりは何mか。",type:"速さの文章題（時間の合計で方程式を立てる）",steps:[
+        {prompt:"分速90mで歩いた道のりをxmとすると、分速60mで歩いた道のりを表す式は？",choices:["1800-x","x-1800","1800+x","x/1800"],a:0,ex:"全体の道のりから引けば残りの道のりになる。"},
+        {prompt:"かかった時間の合計を表す方程式として正しいものは？",choices:["(1800-x)/60+x/90=25","(1800-x)/90+x/60=25","60(1800-x)+90x=25","(1800-x)+x=25"],a:0,ex:"それぞれの時間（道のり÷速さ）を足すと合計時間になる。"},
+        {prompt:"この方程式を解いたxの値（答え）は？",choices:["900m","800m","1000m","1200m"],a:0,ex:"両辺を180倍して整理すると、x=900。"}
+      ]},
+      {q:"正の整数aに対して、「aに3をかけて1を引く」操作を考える。a=5のとき、この操作を2回続けて行うと得られる数はいくらか。",type:"操作を繰り返す問題（1回ずつ順に計算）",steps:[
+        {prompt:"1回目の操作の結果は？",choices:["14","13","16","15"],a:0,ex:"5×3-1=14。"},
+        {prompt:"2回目の操作の結果（答え）は？（14に対して同じ操作を行う）",choices:["41","44","14","13"],a:0,ex:"14×3-1=41。"}
+      ]},
+      {q:"ある品物の値段をx円とする。3個買うと400円余り、5個買うと200円足りない。品物1個の値段を求めなさい。",type:"方程式の利用（2つの式を等しいと置く）",steps:[
+        {prompt:"3個買った場合、持っていた金額を表す式は？",choices:["3x+400","3x-400","400-3x","3x×400"],a:0,ex:"3個分の代金より400円多く持っていた。"},
+        {prompt:"5個買った場合、持っていた金額を表す式は？",choices:["5x-200","5x+200","200-5x","5x×200"],a:0,ex:"5個分の代金より200円少なく持っていた。"},
+        {prompt:"2つの式を=でつないで整理すると？",choices:["2x=600","2x=-600","8x=600","3x=600"],a:0,ex:"3x+400=5x-200 を整理すると2x=600。"},
+        {prompt:"x の値（答え）は？",choices:["300円","200円","250円","350円"],a:0,ex:"2x=600よりx=300。"}
+      ]},
+      {q:"円Oの外部の点Pから引いた2本の接線が、円と点A,点Bで接している。∠APB=40°のとき、∠AOBの大きさを求めなさい。",type:"円の接線の性質（接線⊥半径）",steps:[
+        {prompt:"∠OAP, ∠OBPの大きさはそれぞれ？",choices:["90°ずつ","40°ずつ","45°ずつ","70°ずつ"],a:0,ex:"接線は接点を通る半径に垂直なので90°。"},
+        {prompt:"四角形OAPBの内角の和は？",choices:["360°","180°","270°","90°"],a:0,ex:"四角形の内角の和はつねに360°。"},
+        {prompt:"360-90-90-40 の結果（答え）は？",choices:["140°","130°","100°","50°"],a:0,ex:"360-90-90-40=140°。"}
+      ]},
+      {q:"花子さんは家から駅まで2400mの道を、はじめ分速50mで歩き、途中から分速80mで歩いたところ、39分かかった。分速80mで歩いた道のりは何mか。",type:"速さの文章題（時間の合計で方程式を立てる）",steps:[
+        {prompt:"分速80mで歩いた道のりをxmとすると、分速50mで歩いた道のりを表す式は？",choices:["2400-x","x-2400","2400+x","x/2400"],a:0,ex:"全体の道のりから引けば残りの道のりになる。"},
+        {prompt:"かかった時間の合計を表す方程式として正しいものは？",choices:["(2400-x)/50+x/80=39","(2400-x)/80+x/50=39","50(2400-x)+80x=39","(2400-x)+x=39"],a:0,ex:"それぞれの時間（道のり÷速さ）を足すと合計時間になる。"},
+        {prompt:"この方程式を解いたxの値（答え）は？",choices:["1200m","1000m","1400m","1600m"],a:0,ex:"両辺を400倍して整理すると、x=1200。"}
+      ]}
+    ]}
+  ]},
+
+  kokugo: { name:"国語", color:"kokugo", categories:[
+    { key:"kanji", name:"漢字・語句", meta:"読み・書き・対義語", items:[
+      {q:"「推移」の読み方として正しいものを選べ。",choices:["すいい","ついい","すいこ","ついこ"],a:0,type:"漢字の読み",ex:"「推移」は「すいい」と読み、状況などが変化していくことを意味する。"},
+      {q:"「しゅうかく」を漢字で書いたときに正しいものを選べ。",choices:["収穫","秋獲","収獲","習穫"],a:0,type:"漢字の書き",ex:"作物などを取り入れることは「収穫」と書く。"},
+      {q:"「抵触」の読み方として正しいものを選べ。",choices:["ていしょく","ちょくてい","ていそく","たいしょく"],a:0,type:"漢字の読み",ex:"「抵触」は「ていしょく」と読み、規則などに触れて反することを表す。"},
+      {q:"「けねん」を漢字で書いたときに正しいものを選べ。",choices:["懸念","県念","検念","懸年"],a:0,type:"漢字の書き",ex:"心配して気にかけることを「懸念」と書く。"},
+      {q:"「円滑」の読み方として正しいものを選べ。",choices:["えんかつ","えんこつ","まるかつ","いんかつ"],a:0,type:"漢字の読み",ex:"物事がすらすら運ぶことを「円滑（えんかつ）」という。"},
+      {q:"「拡大」の対義語として最も適切なものを選べ。",choices:["縮小","拡張","増加","拡散"],a:0,type:"対義語",ex:"「拡大」（大きくすること）の反対は「縮小」（小さくすること）。"},
+      {q:"「顕著」の読み方として正しいものを選べ。",choices:["けんちょ","げんちょ","けんじょ","げんじょ"],a:0,type:"漢字の読み",ex:"「顕著」は「けんちょ」と読み、はっきり目立つ様子を表す。"},
+      {q:"「そくばく」を漢字で書いたときに正しいものを選べ。",choices:["束縛","速縛","則縛","促縛"],a:0,type:"漢字の書き",ex:"行動の自由を制限することを「束縛」と書く。"},
+      {q:"「模範」の読み方として正しいものを選べ。",choices:["もはん","ぼはん","もばん","ぼばん"],a:0,type:"漢字の読み",ex:"見習うべき手本のことを「模範（もはん）」という。"},
+      {q:"「配慮」に最も反対の意味に近い語として適切なものを選べ。",choices:["無視","注意","気配り","配布"],a:0,type:"対義語",ex:"「配慮」（気を配ること）の反対に近いのは「無視」（気にかけないこと）。"}
+    ]},
+    { key:"idiom", name:"四字熟語・慣用句", meta:"意味の理解", items:[
+      {q:"「切磋琢磨」の意味として最も適切なものを選べ。",choices:["互いに励まし合い競い合って向上すること","一人で黙々と努力を続けること","仲間と争い合うこと","過去の失敗を悔やむこと"],a:0,type:"四字熟語の意味",ex:"「切磋琢磨」は仲間どうしで励まし合い競い合いながら向上していくことを表す。"},
+      {q:"「有言実行」の意味として最も適切なものを選べ。",choices:["言ったことを実際に行動で示すこと","言葉より行動を優先すること","何も言わずに黙って実行すること","言うだけで実行しないこと"],a:0,type:"四字熟語の意味",ex:"「有言実行」は口にしたことを実際に実行することを表す。"},
+      {q:"「臨機応変」の意味として最も適切なものを選べ。",choices:["その場の状況に応じて適切に対応すること","決められた手順通りに行動すること","危険な場面でとにかく逃げること","計画をあらかじめ細かく立てること"],a:0,type:"四字熟語の意味",ex:"「臨機応変」はその時々の状況に応じて対応を変えることを表す。"},
+      {q:"「頭を抱える」という慣用句の意味として最も適切なものを選べ。",choices:["どうしたらよいか困り果てる","頭が痛くて休む","うれしくて手を上げる","相手に頭を下げてわびる"],a:0,type:"慣用句の意味",ex:"「頭を抱える」は困り果てて悩む様子を表す慣用句。"},
+      {q:"「油断大敵」の意味として最も適切なものを選べ。",choices:["気をゆるめると失敗のもとになるということ","敵に対して油を使って対抗すること","注意深い人ほど失敗しやすいということ","大きな敵ほど油断しているということ"],a:0,type:"四字熟語の意味",ex:"「油断大敵」は気をゆるめることが失敗や事故の原因になるという意味。"},
+      {q:"「一朝一夕」の意味として最も適切なものを選べ。",choices:["わずかな期間","一年に一度の行事","朝と夕方の二回","毎日欠かさず行うこと"],a:0,type:"四字熟語の意味",ex:"「一朝一夕」は非常に短い期間を表し、多くは「一朝一夕にはできない」と否定形で使われる。"},
+      {q:"「大器晩成」の意味として最も適切なものを選べ。",choices:["優れた人物は時間をかけて実力を発揮するということ","大きな道具は完成が早いということ","晩に作業をすると効率がよいということ","器が大きい人は怒りやすいということ"],a:0,type:"四字熟語の意味",ex:"「大器晩成」は大人物は年をとってから実力を発揮するという意味。"},
+      {q:"「口が重い」という慣用句の意味として最も適切なものを選べ。",choices:["話すことが少ない","食べる量が多い","うそをよく言う","声が大きい"],a:0,type:"慣用句の意味",ex:"「口が重い」はあまり話さない性質や様子を表す。"},
+      {q:"「石橋を叩いて渡る」という慣用句の意味として最も適切なものを選べ。",choices:["用心深く物事を行うこと","危険を承知でわざと挑戦すること","橋を修理してから使うこと","何も考えずに突き進むこと"],a:0,type:"慣用句の意味",ex:"「石橋を叩いて渡る」は非常に用心深く物事を行う様子を表す。"}
+    ]},
+    { key:"keigo", name:"敬語の型", meta:"尊敬語・謙譲語の使い分け", items:[
+      {q:"「言う」の尊敬語として最も適切なものを選べ。",choices:["おっしゃる","申す","申し上げる","言われる"],a:0,type:"尊敬語",ex:"「おっしゃる」は相手の動作を高めて言う尊敬語。「申す」「申し上げる」は謙譲語。"},
+      {q:"「見る」の謙譲語として最も適切なものを選べ。",choices:["拝見する","ご覧になる","見られる","見なさる"],a:0,type:"謙譲語",ex:"「拝見する」は自分の動作を控えめに言う謙譲語。「ご覧になる」は尊敬語。"},
+      {q:"「聞く」の謙譲語として最も適切なものを選べ。",choices:["伺う","お聞きになる","聞かれる","聞いてくださる"],a:0,type:"謙譲語",ex:"「伺う」は自分が聞く・訪ねる動作を控えめに言う謙譲語。"},
+      {q:"「先生がいらっしゃる」の「いらっしゃる」はどの種類の敬語か。",choices:["尊敬語","謙譲語","丁寧語","謙遜語"],a:0,type:"敬語の種類の判別",ex:"「いらっしゃる」は相手（先生）の動作を高める尊敬語。"},
+      {q:"「食べる」の謙譲語として最も適切なものを選べ。",choices:["いただく","召し上がる","食べられる","お食べになる"],a:0,type:"謙譲語",ex:"「いただく」は自分の動作を控えめに言う謙譲語。「召し上がる」は尊敬語。"},
+      {q:"「する」の尊敬語として最も適切なものを選べ。",choices:["なさる","いたす","させていただく","する"],a:0,type:"尊敬語",ex:"「なさる」は相手の動作を高める尊敬語。「いたす」は謙譲語。"},
+      {q:"「お客様が参られる」という表現を正しく直したものとして最も適切なものを選べ。",choices:["お客様がいらっしゃる","お客様が参る","お客様がいらっしゃれる","お客様がまいる"],a:0,type:"敬語の誤用の訂正",ex:"「参る」は謙譲語なので、相手（お客様）の動作には使えない。尊敬語の「いらっしゃる」が正しい。"}
+    ]},
+    { key:"reading", name:"読解の型", meta:"心情・接続語・指示語", items:[
+      {q:"次の文章を読んで、あとの問いに答えよ。\n「山田さんは毎朝早く起きて公園を走っている。今日は雨だったので走れず、家で筋トレをした。それでも彼は『体を動かせて良かった』と笑顔だった。」\n山田さんの様子から読み取れる心情として最も適切なものを選べ。",choices:["状況に応じて工夫し前向きに過ごしている","雨で走れずひどく落ち込んでいる","筋トレが嫌いで不満そうにしている","早起きを後悔している"],a:0,type:"心情読解（行動・発言から気持ちを読む）",ex:"雨でも代わりの運動をし、笑顔で満足していることから前向きな様子が読み取れる。"},
+      {q:"次の文中の（　）に入れるのに最も適切な接続語を選べ。\n「雨が降ってきた。（　）、試合は中止になった。」",choices:["そのため","しかし","たとえば","つまり"],a:0,type:"接続語の選択（順接・逆接）",ex:"前の内容（雨）が原因で、後の内容（中止）が結果になっているので、順接の「そのため」が適切。"},
+      {q:"次の文中の「それ」が指す内容として最も適切なものを選べ。\n「この本はとても面白い。それは友人に勧められたものだ。」",choices:["この本","友人","面白さ","勧め"],a:0,type:"指示語が指す内容を探す",ex:"「それ」は直前の文の中心となる名詞「この本」を指している。"},
+      {q:"次の文章を読んで、あとの問いに答えよ。\n「図書室はいつも静かだ。今日は放課後に多くの生徒が集まり、テスト前の勉強に励んでいた。司書の先生は静かに本を整理しながら、みんなの様子を見守っていた。」\nこの文章の内容として最も適切なものを選べ。",choices:["テスト前で多くの生徒が図書室で勉強していた","図書室はいつも生徒でにぎわっている","司書の先生が生徒に勉強を教えていた","生徒たちは本を読まずに話していた"],a:0,type:"文章内容の把握（要点をとらえる）",ex:"「テスト前の勉強に励んでいた」という記述から、テスト前で多くの生徒が勉強していたことがわかる。"},
+      {q:"次の文章を読んで、あとの問いに答えよ。\n「健太は毎日30分だけ英語の音読を続けている。最初はうまく発音できず何度も失敗したが、半年後には先生に発音をほめられるようになった。」\n健太の様子から読み取れる心情として最も適切なものを選べ。",choices:["地道な努力を続けて成果を実感している","練習が嫌でしぶしぶ続けている","一度の失敗であきらめてしまった","結果よりも過程を軽視している"],a:0,type:"心情読解（行動・変化から気持ちを読む）",ex:"失敗を重ねながらも続け、成果（先生にほめられる）が出ていることから、努力の成果を実感している様子が読み取れる。"},
+      {q:"次の文中の（　）に入れるのに最も適切な接続語を選べ。\n「テストで良い点を取った。（　）、毎日勉強を続けた成果だ。」",choices:["なぜなら","しかし","それとも","また"],a:0,type:"接続語の選択（理由を示す）",ex:"後の文が前の文の理由を説明しているので、「なぜなら」が適切。"},
+      {q:"次の文中の「それ」が指す内容として最も適切なものを選べ。\n「弟は新しいゲームを買った。それはとても面白いらしい。」",choices:["新しいゲーム","弟","面白さ","お金"],a:0,type:"指示語が指す内容を探す",ex:"「それ」は直前の文の中心となる名詞「新しいゲーム」を指している。"},
+      {q:"次の文章を読んで、あとの問いに答えよ。\n「花壇の世話をする園芸委員会は、毎週水曜日に活動している。今年は新しい品種の花を植える計画があり、委員たちは資料集めから始めている。」\nこの文章の内容として最も適切なものを選べ。",choices:["園芸委員会は新しい品種の花を植える準備を進めている","園芸委員会は毎日活動している","委員たちはすでに花を植え終えた","花壇の世話は先生が行っている"],a:0,type:"文章内容の把握（要点をとらえる）",ex:"「新しい品種の花を植える計画」「資料集めから始めている」という記述から準備段階であることがわかる。"}
+    ]}
+  ]},
+
+  eigo: { name:"英語", color:"eigo", categories:[
+    { key:"grammar", name:"文法", meta:"be動詞・3単現・冠詞・疑問詞", items:[
+      {q:"What ( ) your name?",choices:["is","are","do","am"],a:0,type:"be動詞の使い分け",ex:"your name は単数扱いなのでbe動詞はis。"},
+      {q:"She ( ) tennis every Sunday.",choices:["plays","play","playing","played"],a:0,type:"3人称単数現在（3単現）",ex:"主語Sheは3人称単数なので動詞にsをつけてplaysとする。"},
+      {q:"( ) is my brother.",choices:["He","His","Him","He's"],a:0,type:"代名詞の格（主格）",ex:"文の主語になるのは主格のHe。"},
+      {q:"I have ( ) apple.",choices:["an","a","some","many"],a:0,type:"冠詞の使い分け",ex:"appleは母音で始まる単数の名詞なのでanを使う。"},
+      {q:"( ) do you get up? — At seven.",choices:["When","What","Who","Where"],a:0,type:"疑問詞の使い分け",ex:"時刻で答えているので、時を尋ねるWhenが適切。"},
+      {q:"Do you like cats? — Yes, ( ).",choices:["I do","I am","I like","I does"],a:0,type:"Do/Does疑問文への応答",ex:"Doで聞かれたらdoを使って答える。"},
+      {q:"They ( ) from Canada.",choices:["are","is","am","be"],a:0,type:"be動詞の使い分け",ex:"主語Theyは複数なのでbe動詞はare。"},
+      {q:"( ) she a teacher? — Yes, she is.",choices:["Is","Are","Does","Do"],a:0,type:"be動詞の疑問文",ex:"主語sheは単数でbe動詞の文なのでIsを使う。"},
+      {q:"My father ( ) breakfast every morning.",choices:["cooks","cook","cooking","to cook"],a:0,type:"3人称単数現在（3単現）",ex:"主語My fatherは3人称単数なので動詞にsをつけてcooksとする。"},
+      {q:"I don't have ( ) money now.",choices:["any","some","many","a lot"],a:0,type:"someとanyの使い分け",ex:"否定文ではsomeの代わりにanyを使う。"}
+    ]},
+    { key:"vocab", name:"語彙・イディオム", meta:"前置詞・熟語表現", items:[
+      {q:"I'm very ( ) in soccer.",choices:["interested","interesting","interest","interests"],a:0,type:"be interested in〜（〜に興味がある）",ex:"「〜に興味がある」はbe interested inの形。"},
+      {q:"Could you ( ) me the salt?",choices:["pass","passed","passing","passes"],a:0,type:"Could you 動詞の原形〜?（依頼表現）",ex:"Could you の後は動詞の原形が続く。"},
+      {q:"He is good ( ) singing.",choices:["at","in","on","for"],a:0,type:"be good at〜（〜が得意）",ex:"「〜が得意」はbe good atの形。"},
+      {q:"Look ( ) that beautiful sunset!",choices:["at","to","for","on"],a:0,type:"look at〜（〜を見る）",ex:"「〜を見て」はlook atの形。"},
+      {q:"She is afraid ( ) dogs.",choices:["of","at","in","for"],a:0,type:"be afraid of〜（〜を怖がる）",ex:"「〜を怖がる」はbe afraid ofの形。"},
+      {q:"We are looking forward ( ) the trip.",choices:["to","for","at","in"],a:0,type:"look forward to〜（〜を楽しみにする）",ex:"「〜を楽しみにする」はlook forward toの形。"},
+      {q:"He is famous ( ) his songs.",choices:["for","at","in","of"],a:0,type:"be famous for〜（〜で有名）",ex:"「〜で有名」はbe famous forの形。"},
+      {q:"I'm proud ( ) my sister.",choices:["of","at","for","to"],a:0,type:"be proud of〜（〜を誇りに思う）",ex:"「〜を誇りに思う」はbe proud ofの形。"}
+    ]},
+    { key:"dialogue", name:"対話文の型", meta:"応答パターンの選択", items:[
+      {q:"A: How much is this bag?\nB: (　　　)",choices:["It's 2000 yen.","It's Monday.","I'm fine.","Yes, please."],a:0,type:"How much〜?への応答",ex:"How muchは値段を尋ねる疑問詞なので、金額で答える。"},
+      {q:"A: Whose pen is this?\nB: (　　　)",choices:["It's mine.","It's here.","I'm here.","It's Monday."],a:0,type:"Whose〜?への応答",ex:"Whoseは「誰の」と持ち主を尋ねるので、所有代名詞で答える。"},
+      {q:"A: Can you swim?\nB: (　　　)",choices:["Yes, I can.","Yes, I do.","Yes, I am.","Yes, I like."],a:0,type:"Can you〜?への応答",ex:"Canでたずねられたらcanまたはcan'tを使って答える。"},
+      {q:"A: What time is it now?\nB: (　　　)",choices:["It's five o'clock.","It's rainy.","It's Sunday.","It's mine."],a:0,type:"What time is it?への応答",ex:"時刻を尋ねられているので、時刻で答える。"},
+      {q:"A: Would you like some tea?\nB: (　　　)",choices:["Yes, please.","Yes, I do.","Yes, I can.","Yes, it is."],a:0,type:"Would you like〜?への応答（勧誘）",ex:"勧誘されたときはYes, please. または No, thank you. で答える。"},
+      {q:"A: How was your weekend?\nB: (　　　)",choices:["It was great.","It's Sunday.","I'm here.","I have one."],a:0,type:"How was〜?への応答（感想）",ex:"How wasは過去の様子や感想を尋ねるので、感想で答える。"},
+      {q:"A: Where is the station?\nB: (　　　)",choices:["It's near the park.","It's five o'clock.","I'm fine.","It's mine."],a:0,type:"Where is〜?への応答（場所）",ex:"Whereは場所を尋ねるので、場所を答える。"},
+      {q:"A: Why are you happy?\nB: (　　　)",choices:["Because I passed the test.","At seven.","In the box.","With my friend."],a:0,type:"Why〜?への応答（理由）",ex:"Whyは理由を尋ねるので、becauseを使って理由を答える。"}
+    ]},
+    { key:"reading", name:"読解", meta:"短い英文の内容理解", items:[
+      {q:"Ken likes soccer very much. He plays it every day after school with his friends. On weekends, he watches soccer games on TV with his father.\n\nWhen does Ken play soccer with his friends?",choices:["After school","On weekends","In the morning","At night"],a:0,type:"英文内容の把握",ex:"He plays it every day after school with his friends とあるので、放課後に友達とサッカーをする。"},
+      {q:"Ken likes soccer very much. He plays it every day after school with his friends. On weekends, he watches soccer games on TV with his father.\n\nWho does Ken watch soccer games with?",choices:["His father","His friends","His mother","His teacher"],a:0,type:"英文内容の把握",ex:"On weekends, he watches soccer games on TV with his father とある。"},
+      {q:"Emi has a cat named Momo. Momo is white and very small. Emi feeds Momo every morning before school.\n\nWhat color is Momo?",choices:["White","Black","Brown","Gray"],a:0,type:"英文内容の把握",ex:"Momo is white and very small とある。"},
+      {q:"Emi has a cat named Momo. Momo is white and very small. Emi feeds Momo every morning before school.\n\nWhen does Emi feed Momo?",choices:["Every morning before school","Every night","On weekends","After school"],a:0,type:"英文内容の把握",ex:"Emi feeds Momo every morning before school とある。"},
+      {q:"Yuki plays the piano every day after dinner. She started learning it three years ago. Her dream is to become a music teacher.\n\nWhen does Yuki play the piano?",choices:["After dinner","Before school","On weekends","In the morning"],a:0,type:"英文内容の把握",ex:"Yuki plays the piano every day after dinner とある。"},
+      {q:"Yuki plays the piano every day after dinner. She started learning it three years ago. Her dream is to become a music teacher.\n\nWhat is Yuki's dream?",choices:["To become a music teacher","To become a pianist","To become a singer","To become a doctor"],a:0,type:"英文内容の把握",ex:"Her dream is to become a music teacher とある。"}
+    ]}
+  ]}
+};
+
+/* id・所属情報を自動付与 */
+Object.keys(QUESTIONS).forEach(subjectKey=>{
+  const subj = QUESTIONS[subjectKey];
+  subj.categories.forEach(cat=>{
+    cat.items.forEach((item, idx)=>{
+      item.id = subjectKey+'_'+cat.key+'_'+idx;
+      item.subjectKey = subjectKey;
+      item.subjectName = subj.name;
+      item.catKey = cat.key;
+      item.catName = cat.name;
+    });
+  });
+});
+
+/* steps を取得（stepsが無い問題は1ステップとして扱う） */
+function getSteps(item){
+  if(item.steps) return item.steps;
+  return [{ prompt:item.q, choices:item.choices, a:item.a, ex:item.ex }];
+}
+
+/* ===== 苦手克服ノート：間違えた問題のID管理 ===== */
+function getWrongSet(){
+  try{ const v = localStorage.getItem('yosou4_wrong'); return v ? JSON.parse(v) : {}; }
+  catch(e){ return {}; }
+}
+function saveWrongSet(set){
+  try{ localStorage.setItem('yosou4_wrong', JSON.stringify(set)); }catch(e){}
+}
+function markWrong(id){ const set = getWrongSet(); set[id] = true; saveWrongSet(set); }
+function markMastered(id){ const set = getWrongSet(); if(set[id]){ delete set[id]; saveWrongSet(set); } }
+function getAllItemsFlat(){
+  let all = [];
+  Object.keys(QUESTIONS).forEach(sk=>{ QUESTIONS[sk].categories.forEach(cat=>{ all = all.concat(cat.items); }); });
+  return all;
+}
+function getWeakItems(){
+  const set = getWrongSet();
+  return getAllItemsFlat().filter(item => set[item.id]);
+}
+function shuffleArr(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; }
+  return a;
+}
+
+/* ===== 状態管理 ===== */
+let state = { screen:"home", mode:"category", subject:null, catIndex:0, items:[], index:0, stepIndex:0, itemHadWrong:false, score:0, answered:false, wrongInSession:[] };
+
+function loadBest(subject, catKey){
+  try{ const v = localStorage.getItem('yosou4_best_'+subject+'_'+catKey); return v ? JSON.parse(v) : null; }
+  catch(e){ return null; }
+}
+function saveBest(subject, catKey, score, total){
+  try{
+    const cur = loadBest(subject, catKey);
+    if(!cur || score > cur.score){ localStorage.setItem('yosou4_best_'+subject+'_'+catKey, JSON.stringify({score, total})); }
+  }catch(e){}
+}
+
+function setHeader(title, showBack){
+  document.getElementById('headerTitle').textContent = title;
+  document.getElementById('backBtn').style.display = showBack ? 'block' : 'none';
+}
+
+function goBack(){
+  if(state.screen === "categories"){
+    renderHome();
+  } else if(state.screen === "quiz" || state.screen === "result"){
+    if(state.mode === "category"){
+      state.screen = "categories";
+      setHeader(QUESTIONS[state.subject].name + ' の単元', true);
+      renderCategories();
+    } else {
+      renderHome();
+    }
+  } else if(state.screen === "weakintro"){
+    renderHome();
+  }
+}
+
+/* ---------- ホーム画面 ---------- */
+function renderHome(){
+  state = { screen:"home", mode:"category", subject:null, catIndex:0, items:[], index:0, stepIndex:0, itemHadWrong:false, score:0, answered:false, wrongInSession:[] };
+  setHeader('予想問題チャレンジ', false);
+  const weakCount = getWeakItems().length;
+  const main = document.getElementById('main');
+  let html = `<div class="notice">実際の試験問題は著作権で保護されているため掲載できません。同じ単元・同じ解法パターンにもとづくオリジナル予想問題です。数学は「計算の順番」を1ステップずつ確認しながら答えにたどりつく形式になっています。</div>`;
+
+  html += `<button class="quick-card weak" onclick="openWeakIntro()">
+      <div>苦手克服ノート<small>${weakCount>0 ? '間違えた問題 '+weakCount+'問' : '間違えた問題がここに自動で集まります'}</small></div>
+      <span class="arrow">›</span>
+    </button>`;
+
+  html += `<button class="quick-card random" onclick="startRandomQuiz(10)">
+      <div>今日の10問（ランダムミックス）<small>3科目からランダムに10問、電車の中でサクッと</small></div>
+      <span class="arrow">›</span>
+    </button>`;
+
+  html += `<div class="section-label">科目を選んで単元別に解く</div>`;
+  html += `<div class="subject-grid">`;
+  Object.keys(QUESTIONS).forEach(key=>{
+    const s = QUESTIONS[key];
+    const total = s.categories.reduce((sum,c)=>sum+c.items.length,0);
+    html += `<button class="subject-btn ${s.color}" onclick="openSubject('${key}')">
+      <div>${s.name}<small>単元数 ${s.categories.length} ／ 全${total}問</small></div>
+      <span class="arrow">›</span>
+    </button>`;
+  });
+  html += `</div>`;
+  main.innerHTML = html;
+}
+
+/* ---------- 苦手克服ノート ---------- */
+function openWeakIntro(){
+  state.screen = "weakintro";
+  setHeader('苦手克服ノート', true);
+  const weakItems = getWeakItems();
+  const main = document.getElementById('main');
+  if(weakItems.length === 0){
+    main.innerHTML = `<div class="empty-msg">苦手な問題はまだありません。<br>クイズで間違えた問題（数学はどこかのステップで1つでも間違えた問題）は、自動的にここに集まります。</div>`;
+    return;
+  }
+  const bySubject = {};
+  weakItems.forEach(it=>{ bySubject[it.subjectName] = (bySubject[it.subjectName]||0)+1; });
+  let html = `<div class="weak-breakdown">`;
+  Object.keys(bySubject).forEach(name=>{
+    html += `<div class="weak-row"><div class="name">${escapeHtml(name)}</div><div class="cnt">${bySubject[name]}問</div></div>`;
+  });
+  html += `</div>`;
+  html += `<button class="result-btn weak" onclick="startWeakQuiz()">苦手問題に挑戦する（全${weakItems.length}問・シャッフル）</button>`;
+  main.innerHTML = html;
+}
+
+function startWeakQuiz(){
+  state.mode = "weak";
+  state.items = shuffleArr(getWeakItems());
+  state.index = 0; state.stepIndex = 0; state.itemHadWrong = false; state.score = 0; state.answered = false; state.wrongInSession = [];
+  state.screen = "quiz";
+  setHeader('苦手克服ノート', true);
+  renderQuestion();
+}
+
+function startRandomQuiz(n){
+  state.mode = "random";
+  state.items = shuffleArr(getAllItemsFlat()).slice(0, n);
+  state.index = 0; state.stepIndex = 0; state.itemHadWrong = false; state.score = 0; state.answered = false; state.wrongInSession = [];
+  state.screen = "quiz";
+  setHeader('今日の'+n+'問', true);
+  renderQuestion();
+}
+
+/* ---------- 科目・単元 ---------- */
+function openSubject(key){
+  state.subject = key;
+  state.screen = "categories";
+  setHeader(QUESTIONS[key].name + ' の単元', true);
+  renderCategories();
+}
+
+function renderCategories(){
+  const s = QUESTIONS[state.subject];
+  let html = `<div class="cat-list">`;
+  s.categories.forEach((c, i)=>{
+    const best = loadBest(state.subject, c.key);
+    html += `<button class="cat-btn" onclick="startCategoryQuiz(${i})">
+      <div><div class="catname">${c.name}</div>
+      <div class="catmeta">${c.meta} ／ 全${c.items.length}問${best ? ' ／ ベスト '+best.score+'/'+best.total : ''}</div></div>
+      <span class="arrow">›</span>
+    </button>`;
+  });
+  html += `</div>`;
+  document.getElementById('main').innerHTML = html;
+}
+
+function startCategoryQuiz(catIndex){
+  state.mode = "category";
+  state.catIndex = catIndex;
+  state.items = QUESTIONS[state.subject].categories[catIndex].items;
+  state.index = 0; state.stepIndex = 0; state.itemHadWrong = false; state.score = 0; state.answered = false; state.wrongInSession = [];
+  state.screen = "quiz";
+  setHeader(QUESTIONS[state.subject].categories[catIndex].name, true);
+  renderQuestion();
+}
+
+/* ---------- クイズ本体 ---------- */
+function renderQuestion(){
+  const items = state.items;
+  const item = items[state.index];
+  const total = items.length;
+  const pct = Math.round((state.index/total)*100);
+  const steps = getSteps(item);
+  const step = steps[state.stepIndex];
+  const multiStep = steps.length > 1;
+
+  let html = `
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-text">${state.index+1}/${total}</div>
+    </div>
+    <div class="qcard">
+      <div class="qnum">
+        <span>問題 ${state.index+1}</span>
+        ${multiStep ? '<span class="step-tag">ステップ '+(state.stepIndex+1)+'/'+steps.length+'</span>' : ''}
+        ${(state.mode!=='category') ? '<span class="tag">'+escapeHtml(item.subjectName)+' / '+escapeHtml(item.catName)+'</span>' : ''}
+      </div>
+      ${multiStep ? '<div class="problem-context">'+escapeHtml(item.q)+'</div><div class="qtext">'+escapeHtml(step.prompt)+'</div>' : '<div class="qtext">'+escapeHtml(item.q)+'</div>'}
+    </div>
+    <div class="choices" id="choicesWrap">`;
+
+  step.choices.forEach((c, i)=>{
+    html += `<button class="choice-btn" data-i="${i}" onclick="selectChoice(${i})">
+      <span class="num">${i+1}</span><span>${escapeHtml(c)}</span>
+    </button>`;
+  });
+
+  const isLastStep = state.stepIndex+1 >= steps.length;
+  const isLastItem = state.index+1 >= items.length;
+  const nextLabel = !isLastStep ? '次のステップへ' : (isLastItem ? '結果を見る' : '次の問題へ');
+
+  html += `</div>
+    <div class="explain" id="explainBox">${item.type ? '<span class="type-tag">'+escapeHtml(item.type)+'</span>' : ''}<span class="wrong-flag" id="wrongFlag" style="display:none;">前回間違えた問題</span><br>${escapeHtml(step.ex)}</div>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">${nextLabel}</button>
+  `;
+
+  document.getElementById('main').innerHTML = html;
+  state.answered = false;
+
+  const wasWrong = getWrongSet()[item.id];
+  if(wasWrong){ document.getElementById('wrongFlag').style.display = 'inline-block'; }
+}
+
+function selectChoice(i){
+  if(state.answered) return;
+  state.answered = true;
+  const items = state.items;
+  const item = items[state.index];
+  const steps = getSteps(item);
+  const step = steps[state.stepIndex];
+  const buttons = document.querySelectorAll('#choicesWrap .choice-btn');
+  buttons.forEach((btn, idx)=>{
+    btn.setAttribute('disabled','true');
+    if(idx === step.a) btn.classList.add('correct');
+    if(idx === i && i !== step.a) btn.classList.add('wrong');
+  });
+  if(i !== step.a){ state.itemHadWrong = true; }
+  document.getElementById('explainBox').classList.add('show');
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion(){
+  const items = state.items;
+  const item = items[state.index];
+  const steps = getSteps(item);
+
+  if(state.stepIndex + 1 < steps.length){
+    state.stepIndex++;
+    state.answered = false;
+    renderQuestion();
+    return;
+  }
+
+  /* この問題（すべてのステップ）が完了 */
+  if(state.itemHadWrong){
+    markWrong(item.id);
+    state.wrongInSession.push(item.id);
+  } else {
+    state.score++;
+    markMastered(item.id);
+  }
+  state.itemHadWrong = false;
+  state.stepIndex = 0;
+
+  if(state.index+1 < items.length){
+    state.index++;
+    state.answered = false;
+    renderQuestion();
+  }else{
+    if(state.mode === "category"){
+      const cat = QUESTIONS[state.subject].categories[state.catIndex];
+      saveBest(state.subject, cat.key, state.score, cat.items.length);
+    }
+    state.screen = "result";
+    renderResult();
+  }
+}
+
+function renderResult(){
+  const items = state.items;
+  const total = items.length;
+  const score = state.score;
+  const pct = Math.round((score/total)*100);
+  let msg = '';
+  if(pct === 100) msg = '全問正解！すばらしい！';
+  else if(pct >= 75) msg = 'よくできました！';
+  else if(pct >= 50) msg = 'もう少し！復習してみよう。';
+  else msg = 'この単元を重点的に復習しよう。';
+
+  let title = '';
+  let retryBtn = '';
+  let backLabel = '単元一覧にもどる';
+  if(state.mode === "category"){
+    const cat = QUESTIONS[state.subject].categories[state.catIndex];
+    title = cat.name + 'の結果';
+    retryBtn = `<button class="result-btn" onclick="startCategoryQuiz(${state.catIndex})">もう一度チャレンジ</button>`;
+  } else if(state.mode === "weak"){
+    title = '苦手克服ノートの結果';
+    retryBtn = `<button class="result-btn weak" onclick="startWeakQuiz()">残っている苦手問題に再挑戦</button>`;
+    backLabel = 'ホームにもどる';
+  } else {
+    title = '今日の' + total + '問の結果';
+    retryBtn = `<button class="result-btn" style="background:var(--sub);" onclick="startRandomQuiz(${total})">もう一度ランダム出題</button>`;
+    backLabel = 'ホームにもどる';
+  }
+
+  const newWrongCount = state.wrongInSession.length;
+
+  document.getElementById('main').innerHTML = `
+    <div class="result-card">
+      <div style="font-size:15px;color:#777;">${title}</div>
+      <div class="result-score">${score} / ${total}</div>
+      <div class="result-msg">${msg}</div>
+      ${newWrongCount>0 ? '<div class="best-note">今回、途中の計算を含めて間違えた '+newWrongCount+' 問は苦手克服ノートに追加されました</div>' : ''}
+      ${retryBtn}
+      <button class="result-btn secondary" onclick="goBack()">${backLabel}</button>
+      <div class="best-note">結果はこの端末に保存されます</div>
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+renderHome();
+</script>
+</body>
+</html>
